@@ -1,13 +1,730 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>pinstack-job-board</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pinstack — Jobs worth pinning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F4EEDC;
+    --paper-dark:#EAE1C7;
+    --board:#7C6244;
+    --board-dark:#6B5439;
+    --board-darker: #5a4630;
+    --ink:#241F16;
+    --ink-soft:#5B5544;
+    --ink-faint:#8b8471;
+    --teal:#2F6E5E;
+    --teal-dark:#1F4D41;
+    --teal-pale:#E1EBE6;
+    --red:#B8453B;
+    --red-pale:#F5E1DE;
+    --amber:#C98A2C;
+    --amber-pale:#F6EAD3;
+    --slate:#6B6559;
+    --line: rgba(36,31,22,0.14);
+    --line-soft: rgba(36,31,22,0.08);
+    --shadow: 0 1px 0 rgba(36,31,22,0.05), 0 6px 16px rgba(36,20,10,0.18);
+    --shadow-lift: 0 2px 0 rgba(36,31,22,0.05), 0 14px 28px rgba(36,20,10,0.28);
+    --radius: 3px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 15% 20%, rgba(0,0,0,0.05) 0, transparent 3%),
+      radial-gradient(circle at 60% 10%, rgba(0,0,0,0.04) 0, transparent 2.5%),
+      radial-gradient(circle at 80% 60%, rgba(0,0,0,0.05) 0, transparent 3%),
+      radial-gradient(circle at 30% 75%, rgba(0,0,0,0.04) 0, transparent 2.5%),
+      radial-gradient(circle at 45% 45%, rgba(0,0,0,0.03) 0, transparent 2%),
+      radial-gradient(circle at 90% 30%, rgba(0,0,0,0.04) 0, transparent 2.5%),
+      linear-gradient(180deg, var(--board) 0%, var(--board-dark) 100%);
+    background-size: 140px 140px, 160px 160px, 130px 130px, 150px 150px, 120px 120px, 145px 145px, 100% 100%;
+    font-family:'IBM Plex Sans', sans-serif;
+    color: var(--ink);
+    min-height:100vh;
+  }
+  a{color:inherit;}
+  ::selection{ background: var(--amber-pale); }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+  .display{ font-family:'Courier Prime', monospace; }
+
+  /* ===== Topbar ===== */
+  .topbar{
+    position:sticky; top:0; z-index:40;
+    background: var(--board-darker);
+    border-bottom: 2px solid rgba(0,0,0,0.25);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  }
+  .topbar-inner{
+    max-width:1200px; margin:0 auto; padding:14px 24px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+  }
+  .wordmark{ display:flex; align-items:baseline; gap:10px; }
+  .wordmark .pin-dot{
+    width:11px;height:11px;border-radius:50%;
+    background: var(--red);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.4), inset 0 -1px 1px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.3);
+    flex:none;
+  }
+  .wordmark h1{
+    font-family:'Courier Prime', monospace; font-weight:700;
+    font-size:22px; letter-spacing:0.5px; color:var(--paper); margin:0;
+  }
+  .wordmark .tag{ color: rgba(244,238,220,0.55); font-size:12.5px; }
+  .topbar-right{ display:flex; align-items:center; gap:8px; }
+  .tab-btn{
+    background:transparent; border:1px solid rgba(244,238,220,0.22);
+    color: rgba(244,238,220,0.75); font-family:'IBM Plex Sans'; font-size:13.5px; font-weight:500;
+    padding:7px 14px; border-radius:20px; cursor:pointer; transition: all .15s ease;
+    display:flex; align-items:center; gap:6px;
+  }
+  .tab-btn:hover{ border-color: rgba(244,238,220,0.4); color:var(--paper); }
+  .tab-btn.active{ background: var(--paper); color: var(--board-darker); border-color:var(--paper); font-weight:600; }
+  .tab-btn .count{
+    font-family:'IBM Plex Mono'; font-size:11px; background: rgba(0,0,0,0.18);
+    padding:1px 6px; border-radius:10px;
+  }
+  .tab-btn.active .count{ background: rgba(36,31,22,0.12); color:var(--board-darker); }
+
+  /* ===== Hero ===== */
+  .hero{ max-width:1200px; margin:0 auto; padding:44px 24px 28px; color: var(--paper); }
+  .hero h2{
+    font-family:'Courier Prime', monospace; font-weight:700;
+    font-size: clamp(28px, 4vw, 42px); line-height:1.15; margin:0 0 10px; letter-spacing:0.2px;
+    max-width:16ch;
+  }
+  .hero p.sub{ color: rgba(244,238,220,0.72); font-size:15.5px; max-width:52ch; margin:0 0 24px; line-height:1.5; }
+
+  .searchbar{
+    display:flex; align-items:stretch; gap:10px; max-width:640px;
+    background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); padding:6px;
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .searchbar svg{ flex:none; margin:0 4px 0 8px; align-self:center; opacity:0.5; }
+  .searchbar input{
+    flex:1; border:none; background:transparent; outline:none;
+    font-family:'IBM Plex Sans'; font-size:15px; color:var(--ink); padding:9px 0;
+  }
+  .searchbar input::placeholder{ color: var(--ink-faint); }
+  .searchbar button{
+    background: var(--teal); color:#fff; border:none; border-radius:2px;
+    padding:0 20px; font-family:'IBM Plex Sans'; font-weight:600; font-size:14px; cursor:pointer;
+    transition: background .15s ease;
+  }
+  .searchbar button:hover{ background: var(--teal-dark); }
+
+  .hero-stats{ display:flex; gap:22px; margin-top:16px; flex-wrap:wrap; }
+  .hero-stats span{ font-family:'IBM Plex Mono'; font-size:12.5px; color: rgba(244,238,220,0.68); }
+  .hero-stats b{ color: var(--paper); font-weight:600; }
+
+  /* ===== Layout ===== */
+  .layout{ max-width:1200px; margin:0 auto; padding: 8px 24px 80px; display:grid; grid-template-columns: 240px 1fr; gap:26px; align-items:start; }
+
+  /* ===== Filters ===== */
+  .filters{
+    background: var(--paper); border-radius: var(--radius); padding:18px 18px 8px;
+    box-shadow: var(--shadow); position:sticky; top:88px;
+    border:1px solid rgba(0,0,0,0.06);
+  }
+  .filters-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .filters-head h3{ font-size:13px; text-transform:uppercase; letter-spacing:0.9px; margin:0; color:var(--ink-soft); font-weight:600; }
+  .clear-link{ font-size:12px; color: var(--teal); background:none; border:none; cursor:pointer; font-family:'IBM Plex Sans'; text-decoration:underline; padding:0; }
+  .clear-link:disabled{ color: var(--ink-faint); text-decoration:none; cursor:default; }
+  .filter-group{ margin-bottom:18px; border-bottom:1px solid var(--line-soft); padding-bottom:14px; }
+  .filter-group:last-child{ border-bottom:none; }
+  .filter-group h4{ font-size:11.5px; text-transform:uppercase; letter-spacing:0.7px; color: var(--ink-faint); margin:0 0 9px; font-weight:600; }
+  .chk{ display:flex; align-items:center; gap:8px; margin-bottom:8px; cursor:pointer; font-size:13.5px; color:var(--ink); user-select:none; }
+  .chk input{ accent-color: var(--teal); width:14px; height:14px; cursor:pointer; }
+  .chk .n{ margin-left:auto; color: var(--ink-faint); font-family:'IBM Plex Mono'; font-size:11px; }
+  .salary-range{ font-size:13px; }
+  .salary-range input[type=range]{ width:100%; accent-color:var(--teal); margin-top:6px; }
+  .salary-val{ font-family:'IBM Plex Mono'; font-size:12px; color:var(--ink-soft); display:flex; justify-content:space-between; }
+
+  .filters-toggle{ display:none; }
+
+  /* ===== Board / results ===== */
+  .board-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
+  .results-count{ color: var(--paper); font-size:14px; font-family:'IBM Plex Mono'; }
+  .results-count b{ color:#fff; }
+  .sort-select{
+    background: var(--paper); border:1px solid rgba(0,0,0,0.08); border-radius:20px;
+    padding:7px 14px; font-family:'IBM Plex Sans'; font-size:13px; color:var(--ink); cursor:pointer;
+  }
+
+  .grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:22px 20px; }
+
+  .card{
+    background: var(--paper); border-radius: 2px; padding:18px 18px 16px;
+    box-shadow: var(--shadow); cursor:pointer; position:relative;
+    transition: transform .18s ease, box-shadow .18s ease;
+    border:1px solid rgba(0,0,0,0.05);
+  }
+  .card:nth-child(3n+1){ transform: rotate(-0.6deg); }
+  .card:nth-child(3n+2){ transform: rotate(0.5deg); }
+  .card:nth-child(3n){ transform: rotate(-0.3deg); }
+  .card:hover, .card:focus-visible{ transform: rotate(0deg) translateY(-3px); box-shadow: var(--shadow-lift); outline:none; }
+  .card:focus-visible{ box-shadow: var(--shadow-lift), 0 0 0 2px var(--teal); }
+
+  .pin{
+    position:absolute; top:-9px; left:22px; width:16px; height:16px; border-radius:50%;
+    box-shadow: 0 2px 3px rgba(0,0,0,0.35), inset 0 -1px 1px rgba(0,0,0,0.25), inset 0 1px 1px rgba(255,255,255,0.35);
+  }
+  .pin.new{ background: var(--amber); }
+  .pin.urgent{ background: var(--red); }
+  .pin.normal{ background: var(--slate); }
+
+  .card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-top:6px; }
+  .card-flag{ font-family:'IBM Plex Mono'; font-size:10px; text-transform:uppercase; letter-spacing:0.6px; font-weight:600; padding:2px 7px; border-radius:9px; }
+  .card-flag.urgent{ background: var(--red-pale); color: var(--red); }
+  .card-flag.new{ background: var(--amber-pale); color: var(--amber); }
+  .save-btn{ background:none; border:none; cursor:pointer; padding:2px; flex:none; opacity:0.55; transition: opacity .15s, transform .15s; }
+  .save-btn:hover{ opacity:1; transform: scale(1.08); }
+  .save-btn.saved{ opacity:1; }
+
+  .card h3{ font-size:16.5px; margin:10px 0 3px; font-weight:600; line-height:1.3; font-family:'IBM Plex Sans'; }
+  .card .company{ font-size:13.5px; color: var(--ink-soft); margin:0 0 10px; font-weight:500; }
+  .meta-row{ display:flex; flex-wrap:wrap; gap:6px 8px; margin-bottom:12px; }
+  .meta-chip{ font-size:11.5px; color:var(--ink-soft); background: rgba(36,31,22,0.05); padding:3px 8px; border-radius:11px; font-family:'IBM Plex Mono'; }
+  .skills-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .skill-tag{ font-size:11px; color: var(--teal-dark); background: var(--teal-pale); padding:3px 8px; border-radius:3px; font-weight:500; }
+  .card-foot{ display:flex; align-items:center; justify-content:space-between; border-top:1px dashed var(--line); padding-top:10px; margin-top:2px; }
+  .salary{ font-family:'IBM Plex Mono'; font-weight:600; font-size:13px; color:var(--ink); }
+  .posted{ font-size:11.5px; color: var(--ink-faint); }
+
+  .empty-state{
+    grid-column: 1/-1; text-align:center; padding:70px 20px; color: var(--paper);
+  }
+  .empty-state h3{ font-family:'Courier Prime'; font-size:20px; margin-bottom:8px; }
+  .empty-state p{ color: rgba(244,238,220,0.65); margin-bottom:18px; font-size:14px; }
+  .empty-state button{
+    background: var(--paper); color:var(--board-darker); border:none; padding:9px 18px;
+    border-radius:20px; font-weight:600; cursor:pointer; font-family:'IBM Plex Sans'; font-size:13.5px;
+  }
+
+  /* ===== Modal ===== */
+  .overlay{
+    position:fixed; inset:0; background: rgba(20,15,8,0.55); z-index:60;
+    display:none; align-items:flex-start; justify-content:center; padding: 40px 20px; overflow-y:auto;
+    backdrop-filter: blur(1px);
+  }
+  .overlay.open{ display:flex; }
+  .modal{
+    background: var(--paper); max-width:640px; width:100%; border-radius:4px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.4); position:relative; animation: rise .22s ease;
+    margin-top: 10px;
+  }
+  @keyframes rise{ from{ opacity:0; transform: translateY(14px);} to{opacity:1; transform:translateY(0);} }
+  .modal-head{ padding:26px 28px 18px; border-bottom:1px solid var(--line-soft); position:relative; }
+  .modal-close{
+    position:absolute; top:18px; right:18px; background:none; border:none; cursor:pointer; opacity:0.5; padding:6px;
+  }
+  .modal-close:hover{ opacity:1; }
+  .modal-flags{ display:flex; gap:8px; margin-bottom:10px; }
+  .modal-head h2{ font-size:23px; margin:0 0 4px; font-weight:700; font-family:'IBM Plex Sans'; padding-right:30px; }
+  .modal-head .company{ color: var(--ink-soft); font-size:15px; margin:0 0 14px; }
+  .modal-meta{ display:flex; flex-wrap:wrap; gap:8px; }
+  .modal-body{ padding:22px 28px 10px; }
+  .modal-body h4{ font-size:12px; text-transform:uppercase; letter-spacing:0.7px; color:var(--ink-faint); margin:0 0 8px; font-weight:600; }
+  .modal-body p{ font-size:14.5px; line-height:1.65; color:var(--ink); margin:0 0 20px; }
+  .modal-body ul{ margin:0 0 20px; padding-left:20px; }
+  .modal-body li{ font-size:14px; line-height:1.65; margin-bottom:4px; color:var(--ink); }
+  .modal-foot{
+    padding:18px 28px 26px; display:flex; align-items:center; gap:12px; border-top:1px solid var(--line-soft); margin-top:6px;
+    flex-wrap:wrap;
+  }
+  .btn-primary{
+    background: var(--teal); color:#fff; border:none; padding:11px 22px; border-radius:3px;
+    font-weight:600; font-size:14.5px; cursor:pointer; font-family:'IBM Plex Sans'; transition: background .15s;
+  }
+  .btn-primary:hover{ background: var(--teal-dark); }
+  .btn-secondary{
+    background:transparent; color: var(--ink); border:1px solid var(--line); padding:10px 18px; border-radius:3px;
+    font-weight:500; font-size:14.5px; cursor:pointer; font-family:'IBM Plex Sans'; display:flex; align-items:center; gap:7px;
+  }
+  .btn-secondary:hover{ border-color: var(--ink-soft); }
+  .modal-salary{ margin-left:auto; text-align:right; }
+  .modal-salary .amt{ font-family:'IBM Plex Mono'; font-weight:600; font-size:15px; }
+  .modal-salary .lbl{ font-size:11px; color:var(--ink-faint); }
+
+  /* ===== Apply confirm modal ===== */
+  .apply-modal{ max-width:400px; text-align:center; padding:34px 28px; }
+  .apply-modal svg{ margin-bottom:14px; }
+  .apply-modal h3{ font-size:18px; margin:0 0 8px; font-family:'IBM Plex Sans'; }
+  .apply-modal p{ font-size:14px; color:var(--ink-soft); line-height:1.55; margin:0 0 22px; }
+
+  /* ===== Toast ===== */
+  .toast{
+    position:fixed; bottom:22px; right:22px; background: var(--ink); color: var(--paper);
+    padding:13px 18px; border-radius:4px; font-size:13.5px; box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    display:flex; align-items:center; gap:10px; z-index:80; transform: translateY(20px); opacity:0;
+    transition: all .25s ease; font-family:'IBM Plex Sans';
+  }
+  .toast.show{ transform: translateY(0); opacity:1; }
+  .toast .dot{ width:8px;height:8px;border-radius:50%; background: var(--amber); flex:none; }
+
+  /* ===== Mobile ===== */
+  @media (max-width: 860px){
+    .layout{ grid-template-columns: 1fr; }
+    .filters{ position:static; display:none; }
+    .filters.open{ display:block; }
+    .filters-toggle{
+      display:flex; align-items:center; gap:8px; background: var(--paper); border:none;
+      padding:9px 16px; border-radius:20px; font-family:'IBM Plex Sans'; font-weight:600; font-size:13.5px;
+      cursor:pointer; box-shadow: var(--shadow);
+    }
+    .topbar-inner{ flex-wrap:wrap; }
+    .wordmark .tag{ display:none; }
+  }
+  @media (max-width: 480px){
+    .hero{ padding:32px 16px 20px; }
+    .layout{ padding:8px 16px 60px; }
+    .searchbar{ flex-wrap:nowrap; }
+    .searchbar button{ padding:0 14px; font-size:13px; }
+    .modal-foot{ flex-direction:column; align-items:stretch; }
+    .modal-salary{ margin-left:0; text-align:left; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+  }
+
+  :focus-visible{ outline: 2px solid var(--teal); outline-offset:2px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="wordmark">
+      <span class="pin-dot"></span>
+      <h1>Pinstack</h1>
+      <span class="tag">jobs worth pinning</span>
+    </div>
+    <div class="topbar-right">
+      <button class="tab-btn active" id="tabAll" onclick="setTab('all')">All jobs <span class="count mono" id="countAll">14</span></button>
+      <button class="tab-btn" id="tabSaved" onclick="setTab('saved')">Saved <span class="count mono" id="countSaved">0</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="hero">
+  <h2>Every opening, pinned the day it goes up.</h2>
+  <p class="sub">Search and filter real roles for early-career software engineers across India — from Java backend to full-stack to data. No noise, no expired listings.</p>
+  <div class="searchbar">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="searchInput" type="text" placeholder="Search by title, company, or skill — e.g. 'Spring Boot'" oninput="onSearch()">
+    <button onclick="onSearch()">Search</button>
+  </div>
+  <div class="hero-stats">
+    <span><b id="statTotal">14</b> roles pinned</span>
+    <span><b id="statNew">—</b> posted this week</span>
+    <span><b id="statUrgent">—</b> hiring urgently</span>
+  </div>
+</div>
+
+<div class="layout">
+  <aside class="filters" id="filtersPanel">
+    <div class="filters-head">
+      <h3>Filter board</h3>
+      <button class="clear-link" id="clearBtn" onclick="clearFilters()" disabled>Clear all</button>
+    </div>
+
+    <div class="filter-group">
+      <h4>Category</h4>
+      <div id="catFilters"></div>
+    </div>
+
+    <div class="filter-group">
+      <h4>Work setting</h4>
+      <div id="locFilters"></div>
+    </div>
+
+    <div class="filter-group">
+      <h4>Experience</h4>
+      <div id="expFilters"></div>
+    </div>
+
+    <div class="filter-group">
+      <h4>Job type</h4>
+      <div id="typeFilters"></div>
+    </div>
+
+    <div class="filter-group" style="border-bottom:none;">
+      <h4>Minimum salary</h4>
+      <div class="salary-range">
+        <input type="range" id="salarySlider" min="0" max="15" step="0.5" value="0" oninput="onSalary()">
+        <div class="salary-val"><span id="salaryLabel">Any salary</span><span>15+ LPA</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <button class="filters-toggle" onclick="toggleFilters()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+      Filters <span id="activeFilterCount"></span>
+    </button>
+    <br class="mob-br">
+    <div class="board-head" style="margin-top:12px;">
+      <div class="results-count"><b id="resultsN">14</b> roles match</div>
+      <select class="sort-select" id="sortSelect" onchange="render()">
+        <option value="newest">Newest first</option>
+        <option value="salaryDesc">Salary: high to low</option>
+        <option value="salaryAsc">Salary: low to high</option>
+        <option value="az">Company A–Z</option>
+      </select>
+    </div>
+    <div class="grid" id="grid"></div>
+  </main>
+</div>
+
+<!-- Job detail modal -->
+<div class="overlay" id="detailOverlay" onclick="if(event.target===this) closeDetail()">
+  <div class="modal" id="detailModal"></div>
+</div>
+
+<!-- Apply confirm modal -->
+<div class="overlay" id="applyOverlay" onclick="if(event.target===this) closeApply()">
+  <div class="modal apply-modal" id="applyModal"></div>
+</div>
+
+<div class="toast" id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
+
+<script>
+const JOBS = [
+  {id:1, title:"Backend Engineer — Java / Spring Boot", company:"Zoho Corporation", location:"Chennai", locType:"Onsite", category:"Backend", exp:"Fresher", type:"Full-time", salaryMin:4, salaryMax:6, salaryLabel:"₹4–6 LPA", posted:1, urgent:true,
+    skills:["Java","Spring Boot","MySQL","REST APIs"],
+    desc:"Join the platform team building Zoho's core CRM services. You'll design and maintain REST APIs used by millions of users daily, working closely with senior engineers on service reliability and performance.",
+    resp:["Build and maintain REST APIs in Java/Spring Boot","Write unit and integration tests for new features","Participate in code reviews and design discussions","Debug and resolve production issues with the on-call team"],
+    reqs:["B.Tech in CS or related field, 2026 or earlier graduate","Solid grasp of Java, OOP, and Collections","Familiarity with Spring Boot and relational databases","Comfortable with Git and basic Linux commands"]},
+
+  {id:2, title:"Software Development Engineer I", company:"Freshworks", location:"Chennai", locType:"Hybrid", category:"Backend", exp:"Fresher", type:"Full-time", salaryMin:6, salaryMax:9, salaryLabel:"₹6–9 LPA", posted:3, urgent:false,
+    skills:["Java","Microservices","Kafka","AWS"],
+    desc:"Freshworks is hiring SDE-1s for its customer engagement suite. You'll work in a microservices environment handling high-throughput event streams via Kafka.",
+    resp:["Develop microservices supporting real-time customer data pipelines","Own features end-to-end from design through deployment","Collaborate with product and QA on release cycles","Monitor and improve service performance in production"],
+    reqs:["Strong fundamentals in Java and data structures","Exposure to Kafka or other message queues is a plus","Understanding of AWS basics (EC2, S3)","Good communication and a bias for shipping"]},
+
+  {id:3, title:"Backend Developer Intern", company:"FlowDesk Labs", location:"Remote", locType:"Remote", category:"Backend", exp:"Intern", type:"Internship", salaryMin:2.4, salaryMax:3, salaryLabel:"₹20k–25k /mo", posted:2, urgent:false,
+    skills:["Spring Boot","JWT","Razorpay API","PostgreSQL"],
+    desc:"FlowDesk is a kanban SaaS tool for Indian freelancers. As a backend intern, you'll ship real features alongside a two-person engineering team — high ownership, fast feedback.",
+    resp:["Build authenticated API endpoints with JWT and RBAC","Integrate and test payment flows via Razorpay","Write migrations and queries against PostgreSQL","Ship weekly to a live production environment"],
+    reqs:["Working knowledge of Spring Boot or a similar framework","A GitHub profile with personal or academic projects","Available for a 3–6 month full-time internship","Self-directed — comfortable with async, remote work"]},
+
+  {id:4, title:"Java Backend Engineer", company:"Persistent Systems", location:"Pune", locType:"Onsite", category:"Backend", exp:"1-3 yrs", type:"Full-time", salaryMin:5, salaryMax:8, salaryLabel:"₹5–8 LPA", posted:6, urgent:false,
+    skills:["Java 17","Spring Boot","Docker","CI/CD"],
+    desc:"Persistent's enterprise services team is expanding. You'll modernize legacy services into containerized Spring Boot applications for global clients.",
+    resp:["Refactor legacy modules into Spring Boot microservices","Containerize services with Docker and support CI/CD pipelines","Pair with client-side architects on technical design","Document APIs and internal runbooks"],
+    reqs:["1–3 years building backend services in Java","Exposure to Docker and any CI/CD tool (Jenkins, GitHub Actions)","Comfortable reading and refactoring unfamiliar codebases","Client-facing communication skills"]},
+
+  {id:5, title:"Associate Software Engineer", company:"Infosys (DSE)", location:"Hyderabad", locType:"Onsite", category:"Backend", exp:"Fresher", type:"Full-time", salaryMin:3.6, salaryMax:4.5, salaryLabel:"₹3.6–4.5 LPA", posted:10, urgent:false,
+    skills:["Java","SQL","Spring","OOP"],
+    desc:"Infosys Digital Specialist Engineer track for 2026 graduates. Structured onboarding with a 2-month training bootcamp before project deployment.",
+    resp:["Complete a structured Java + Spring training bootcamp","Get deployed to a client project post-certification","Write and maintain backend modules under senior guidance","Follow Infosys engineering and QA standards"],
+    reqs:["B.Tech/B.E. 2026 graduate, any core branch with CS fundamentals","Cleared Infosys DSE assessment (numerical, logical, coding)","Basic Java and SQL knowledge","Willingness to relocate within India if required"]},
+
+  {id:6, title:"Full Stack Engineer — React + Spring Boot", company:"Brace Infotech", location:"Hyderabad", locType:"Hybrid", category:"Full Stack", exp:"Fresher", type:"Full-time", salaryMin:4, salaryMax:6, salaryLabel:"₹4–6 LPA", posted:4, urgent:true,
+    skills:["React","Spring Boot","PostgreSQL","REST"],
+    desc:"Brace Infotech builds internal tools for logistics clients. Small team, real ownership — you'll touch both the React frontend and Spring Boot backend from week one.",
+    resp:["Build UI features in React and wire them to Spring Boot APIs","Design database schemas in PostgreSQL","Fix bugs reported directly by client users","Join twice-weekly planning syncs with the founding team"],
+    reqs:["Comfortable across both frontend (React) and backend (Java)","Personal or academic full-stack project to show","Fast learner — this is a startup, priorities shift often","Based in or willing to relocate to Hyderabad"]},
+
+  {id:7, title:"Backend Engineer — Fintech", company:"Midas Finance", location:"Bangalore", locType:"Remote", exp:"1-3 yrs", category:"Backend", type:"Full-time", salaryMin:8, salaryMax:12, salaryLabel:"₹8–12 LPA", posted:1, urgent:true,
+    skills:["Kafka","Spring Boot","Event-Driven","H2/Postgres"],
+    desc:"Midas is a Kafka-driven finance platform handling transaction validation, balance tracking, and cashback incentives at scale. Deep systems work for engineers who like event-driven architecture.",
+    resp:["Design event-driven flows using Kafka producers/consumers","Build transaction validation and balance-tracking services","Own incentive and cashback calculation APIs","Maintain data consistency across distributed services"],
+    reqs:["1–3 years with Kafka or another event streaming platform","Strong understanding of Spring Boot and transactional systems","Experience with financial or high-integrity data a strong plus","Can reason clearly about idempotency and race conditions"]},
+
+  {id:8, title:"DevOps Engineer", company:"CloudNimbus", location:"Bangalore", locType:"Hybrid", category:"DevOps", exp:"1-3 yrs", type:"Full-time", salaryMin:7, salaryMax:11, salaryLabel:"₹7–11 LPA", posted:8, urgent:false,
+    skills:["Kubernetes","Docker","Terraform","AWS"],
+    desc:"CloudNimbus manages infrastructure for a portfolio of SaaS clients. You'll own CI/CD pipelines and Kubernetes clusters serving production traffic.",
+    resp:["Maintain and improve CI/CD pipelines across client projects","Manage Kubernetes clusters and container deployments","Write Terraform for reproducible infrastructure","Respond to on-call incidents on a rotating schedule"],
+    reqs:["1–3 years in a DevOps or SRE-adjacent role","Hands-on with Docker and Kubernetes in production","Terraform or similar infra-as-code experience","AWS certification is a plus, not required"]},
+
+  {id:9, title:"Data Analyst", company:"NSIC Analytics Wing", location:"Hyderabad", locType:"Onsite", category:"Data", exp:"Fresher", type:"Full-time", salaryMin:3.5, salaryMax:5, salaryLabel:"₹3.5–5 LPA", posted:12, urgent:false,
+    skills:["Python","SQL","Pandas","Power BI"],
+    desc:"NSIC's analytics wing supports MSME data initiatives across India. You'll build dashboards and reports that inform policy-facing decisions.",
+    resp:["Clean and analyze datasets using Python and SQL","Build recurring dashboards in Power BI","Present findings to non-technical stakeholders","Document data pipelines for internal reuse"],
+    reqs:["Coursework or internship experience in data analysis","Working knowledge of Python (Pandas) and SQL","Ability to communicate findings clearly in writing","Government/PSU background a plus, not required"]},
+
+  {id:10, title:"QA Automation Engineer", company:"Zorvyn FinTEC", location:"Hyderabad", locType:"Remote", category:"QA", exp:"Fresher", type:"Full-time", salaryMin:4, salaryMax:5.5, salaryLabel:"₹4–5.5 LPA", posted:5, urgent:false,
+    skills:["Selenium","Java","Postman","CI"],
+    desc:"Zorvyn's FinTech RBAC backend needs a dedicated QA automation hire to build out its test suite ahead of a compliance audit.",
+    resp:["Write automated UI tests with Selenium and Java","Build and maintain API test suites in Postman","Integrate test runs into the CI pipeline","Log and triage bugs with the backend team"],
+    reqs:["Familiarity with Selenium or another automation framework","Basic Java for writing test scripts","Understanding of REST API testing concepts","Detail-oriented — this role guards production quality"]},
+
+  {id:11, title:"Frontend Engineer — React", company:"PanTech Solutions", location:"Hyderabad", locType:"Onsite", category:"Frontend", exp:"Fresher", type:"Full-time", salaryMin:3.8, salaryMax:5, salaryLabel:"₹3.8–5 LPA", posted:9, urgent:false,
+    skills:["React","JavaScript","CSS","Cypress"],
+    desc:"PanTech's web team ships client dashboards for education-sector customers. You'll build accessible, tested React components as part of a small squad.",
+    resp:["Build responsive React components from Figma designs","Write Cypress tests for critical user flows","Fix cross-browser and accessibility issues","Collaborate directly with the design team"],
+    reqs:["Solid JavaScript and React fundamentals","Some exposure to component testing (Cypress, Jest, etc.)","Eye for UI detail and accessibility basics","Prior internship in web development preferred"]},
+
+  {id:12, title:"Software Engineer", company:"Oracle India", location:"Hyderabad", locType:"Onsite", category:"Backend", exp:"Fresher", type:"Full-time", salaryMin:7, salaryMax:10, salaryLabel:"₹7–10 LPA", posted:2, urgent:true,
+    skills:["Java","SQL","Distributed Systems","Cloud"],
+    desc:"Oracle's cloud infrastructure org is hiring campus-track engineers into distributed systems teams working on core database and cloud services.",
+    resp:["Contribute to core services within Oracle Cloud Infrastructure","Write and review production-grade Java code","Participate in design reviews for distributed components","Complete a structured 6-month rotation program"],
+    reqs:["Strong CS fundamentals — DSA, OOP, databases","2026 graduate from a recognized institution","Cleared Oracle's online assessment and interview loop","Willingness to work on distributed, large-scale systems"]},
+
+  {id:13, title:"Backend Engineer Intern", company:"Razorpay", location:"Bangalore", locType:"Remote", category:"Backend", exp:"Intern", type:"Internship", salaryMin:2.4, salaryMax:3.6, salaryLabel:"₹20k–30k /mo", posted:1, urgent:true,
+    skills:["Java","Spring Boot","Payments","REST"],
+    desc:"Razorpay's payments core team runs a competitive internship program with strong full-time conversion rates. You'll work on real payment-processing code paths.",
+    resp:["Build and test backend services touching live payment flows","Work under a senior engineer's direct mentorship","Ship at least one owned feature during the internship","Present your work in a final demo to the team"],
+    reqs:["Strong Java fundamentals and clean coding habits","Prior project or internship involving APIs","Available for a 6-month internship with FTE potential","Comfortable with a fast-paced, high-bar engineering culture"]},
+
+  {id:14, title:"Site Reliability Engineer", company:"TCS Digital", location:"Chennai", locType:"Hybrid", category:"DevOps", exp:"1-3 yrs", type:"Full-time", salaryMin:6, salaryMax:9, salaryLabel:"₹6–9 LPA", posted:14, urgent:false,
+    skills:["Linux","Monitoring","Java","Incident Response"],
+    desc:"TCS Digital's SRE guild supports large enterprise clients. You'll build monitoring and alerting for Java-based systems and lead incident response for assigned accounts.",
+    resp:["Set up monitoring and alerting for client production systems","Lead incident response and write post-incident reviews","Automate routine operational tasks with scripts","Partner with client engineering teams on reliability goals"],
+    reqs:["1–3 years in an SRE, DevOps, or backend support role","Comfortable with Linux administration and shell scripting","Exposure to monitoring tools (Grafana, Prometheus, or similar)","Calm under pressure during live incidents"]}
+];
+
+let state = {
+  search: "",
+  cats: new Set(),
+  locs: new Set(),
+  exps: new Set(),
+  types: new Set(),
+  minSalary: 0,
+  sort: "newest",
+  tab: "all",
+  saved: new Set()
+};
+
+const CATS = [...new Set(JOBS.map(j=>j.category))];
+const LOCS = [...new Set(JOBS.map(j=>j.locType))];
+const EXPS = ["Intern","Fresher","1-3 yrs","3-5 yrs"];
+const TYPES = [...new Set(JOBS.map(j=>j.type))];
+
+function buildFilterGroup(containerId, items, setRef){
+  const el = document.getElementById(containerId);
+  el.innerHTML = items.map(item=>{
+    const n = JOBS.filter(j=>{
+      if(containerId==="catFilters") return j.category===item;
+      if(containerId==="locFilters") return j.locType===item;
+      if(containerId==="expFilters") return j.exp===item;
+      if(containerId==="typeFilters") return j.type===item;
+    }).length;
+    if(n===0) return "";
+    const id = containerId+"-"+item.replace(/\s+/g,'');
+    return `<label class="chk" for="${id}"><input type="checkbox" id="${id}" data-val="${item}" onchange="toggleFilter('${containerId}', this)"> ${item} <span class="n">${n}</span></label>`;
+  }).join("");
+}
+
+function toggleFilter(group, el){
+  const setMap = {catFilters: state.cats, locFilters: state.locs, expFilters: state.exps, typeFilters: state.types};
+  const s = setMap[group];
+  if(el.checked) s.add(el.dataset.val); else s.delete(el.dataset.val);
+  render();
+}
+
+function onSearch(){ state.search = document.getElementById('searchInput').value.trim().toLowerCase(); render(); }
+function onSalary(){
+  state.minSalary = parseFloat(document.getElementById('salarySlider').value);
+  document.getElementById('salaryLabel').textContent = state.minSalary===0 ? "Any salary" : "₹"+state.minSalary+"+ LPA";
+  render();
+}
+function toggleFilters(){ document.getElementById('filtersPanel').classList.toggle('open'); }
+function setTab(t){
+  state.tab = t;
+  document.getElementById('tabAll').classList.toggle('active', t==='all');
+  document.getElementById('tabSaved').classList.toggle('active', t==='saved');
+  render();
+}
+
+function clearFilters(){
+  state.search=""; state.cats.clear(); state.locs.clear(); state.exps.clear(); state.types.clear(); state.minSalary=0;
+  document.getElementById('searchInput').value="";
+  document.getElementById('salarySlider').value=0;
+  document.getElementById('salaryLabel').textContent="Any salary";
+  document.querySelectorAll('.filters input[type=checkbox]').forEach(c=>c.checked=false);
+  render();
+}
+
+function activeFilterCount(){
+  return state.cats.size + state.locs.size + state.exps.size + state.types.size + (state.minSalary>0?1:0) + (state.search?1:0);
+}
+
+function toggleSave(id, ev){
+  if(ev) ev.stopPropagation();
+  if(state.saved.has(id)) state.saved.delete(id); else state.saved.add(id);
+  render();
+}
+
+function getFiltered(){
+  return JOBS.filter(j=>{
+    if(state.tab==='saved' && !state.saved.has(j.id)) return false;
+    if(state.search){
+      const hay = (j.title+" "+j.company+" "+j.skills.join(" ")).toLowerCase();
+      if(!hay.includes(state.search)) return false;
+    }
+    if(state.cats.size && !state.cats.has(j.category)) return false;
+    if(state.locs.size && !state.locs.has(j.locType)) return false;
+    if(state.exps.size && !state.exps.has(j.exp)) return false;
+    if(state.types.size && !state.types.has(j.type)) return false;
+    if(state.minSalary>0 && j.salaryMax < state.minSalary) return false;
+    return true;
+  });
+}
+
+function sortJobs(list){
+  const s = document.getElementById('sortSelect').value;
+  state.sort = s;
+  const arr = [...list];
+  if(s==='newest') arr.sort((a,b)=>a.posted-b.posted);
+  if(s==='salaryDesc') arr.sort((a,b)=>b.salaryMax-a.salaryMax);
+  if(s==='salaryAsc') arr.sort((a,b)=>a.salaryMax-b.salaryMax);
+  if(s==='az') arr.sort((a,b)=>a.company.localeCompare(b.company));
+  return arr;
+}
+
+function pinClass(j){ if(j.urgent) return 'urgent'; if(j.posted<=3) return 'new'; return 'normal'; }
+function flagHtml(j){
+  if(j.urgent) return `<span class="card-flag urgent">Hiring urgently</span>`;
+  if(j.posted<=3) return `<span class="card-flag new">New</span>`;
+  return `<span></span>`;
+}
+function postedLabel(d){ return d===1 ? "Posted 1 day ago" : "Posted "+d+" days ago"; }
+
+function cardHtml(j){
+  const saved = state.saved.has(j.id);
+  return `
+  <div class="card" tabindex="0" role="button" aria-label="View ${j.title} at ${j.company}" onclick="openDetail(${j.id})" onkeydown="if(event.key==='Enter') openDetail(${j.id})">
+    <div class="pin ${pinClass(j)}"></div>
+    <div class="card-top">
+      ${flagHtml(j)}
+      <button class="save-btn ${saved?'saved':''}" aria-label="${saved?'Remove from saved':'Save job'}" onclick="toggleSave(${j.id}, event)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="${saved?'#C98A2C':'none'}" stroke="${saved?'#C98A2C':'#5B5544'}" stroke-width="2"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>
+      </button>
+    </div>
+    <h3>${j.title}</h3>
+    <p class="company">${j.company} · ${j.location}</p>
+    <div class="meta-row">
+      <span class="meta-chip">${j.locType}</span>
+      <span class="meta-chip">${j.exp}</span>
+      <span class="meta-chip">${j.type}</span>
+    </div>
+    <div class="skills-row">
+      ${j.skills.slice(0,4).map(s=>`<span class="skill-tag">${s}</span>`).join("")}
+    </div>
+    <div class="card-foot">
+      <span class="salary">${j.salaryLabel}</span>
+      <span class="posted">${postedLabel(j.posted)}</span>
+    </div>
+  </div>`;
+}
+
+function render(){
+  const filtered = sortJobs(getFiltered());
+  const grid = document.getElementById('grid');
+
+  document.getElementById('resultsN').textContent = filtered.length;
+  document.getElementById('countAll').textContent = JOBS.length;
+  document.getElementById('countSaved').textContent = state.saved.size;
+  const afc = activeFilterCount();
+  document.getElementById('activeFilterCount').textContent = afc ? `(${afc})` : "";
+  document.getElementById('clearBtn').disabled = afc===0;
+
+  if(filtered.length===0){
+    const msg = state.tab==='saved'
+      ? {h:"Nothing pinned yet", p:"Save a role from the board and it'll show up here.", showClear:false}
+      : {h:"No jobs match these filters", p:"Try widening your search or clearing a filter to see more roles.", showClear:true};
+    grid.innerHTML = `<div class="empty-state">
+      <h3 class="display">${msg.h}</h3>
+      <p>${msg.p}</p>
+      ${msg.showClear ? `<button onclick="clearFilters()">Clear filters</button>` : `<button onclick="setTab('all')">Browse all jobs</button>`}
+    </div>`;
+    return;
+  }
+  grid.innerHTML = filtered.map(cardHtml).join("");
+}
+
+function openDetail(id){
+  const j = JOBS.find(x=>x.id===id);
+  const saved = state.saved.has(id);
+  document.getElementById('detailModal').innerHTML = `
+    <button class="modal-close" aria-label="Close" onclick="closeDetail()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="modal-head">
+      <div class="modal-flags">${flagHtml(j)}</div>
+      <h2>${j.title}</h2>
+      <p class="company">${j.company} · ${j.location}</p>
+      <div class="modal-meta">
+        <span class="meta-chip">${j.locType}</span>
+        <span class="meta-chip">${j.exp}</span>
+        <span class="meta-chip">${j.type}</span>
+        <span class="meta-chip">${postedLabel(j.posted)}</span>
+      </div>
+    </div>
+    <div class="modal-body">
+      <h4>About the role</h4>
+      <p>${j.desc}</p>
+      <h4>What you'll do</h4>
+      <ul>${j.resp.map(r=>`<li>${r}</li>`).join("")}</ul>
+      <h4>What we're looking for</h4>
+      <ul>${j.reqs.map(r=>`<li>${r}</li>`).join("")}</ul>
+      <h4>Skills</h4>
+      <div class="skills-row">${j.skills.map(s=>`<span class="skill-tag">${s}</span>`).join("")}</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-primary" onclick="openApply(${j.id})">Apply now</button>
+      <button class="btn-secondary" onclick="toggleSave(${j.id}, event); refreshDetailSaveBtn(${j.id})" id="detailSaveBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="${saved?'#C98A2C':'none'}" stroke="${saved?'#C98A2C':'#241F16'}" stroke-width="2"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>
+        ${saved ? 'Saved' : 'Save for later'}
+      </button>
+      <div class="modal-salary"><div class="amt">${j.salaryLabel}</div><div class="lbl">compensation</div></div>
+    </div>
+  `;
+  document.getElementById('detailOverlay').classList.add('open');
+}
+function refreshDetailSaveBtn(id){
+  const saved = state.saved.has(id);
+  const btn = document.getElementById('detailSaveBtn');
+  if(!btn) return;
+  btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="${saved?'#C98A2C':'none'}" stroke="${saved?'#C98A2C':'#241F16'}" stroke-width="2"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg> ${saved?'Saved':'Save for later'}`;
+}
+function closeDetail(){ document.getElementById('detailOverlay').classList.remove('open'); }
+
+function openApply(id){
+  const j = JOBS.find(x=>x.id===id);
+  document.getElementById('applyModal').innerHTML = `
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2F6E5E" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M8 12l2.5 2.5L16 9"/></svg>
+    <h3>Apply to ${j.company}?</h3>
+    <p>You're about to submit your profile for <b>${j.title}</b>. Pinstack will notify you here once ${j.company} responds.</p>
+    <button class="btn-primary" style="width:100%; margin-bottom:10px;" onclick="confirmApply('${j.company.replace(/'/g,"")}')">Confirm application</button>
+    <button class="btn-secondary" style="width:100%; justify-content:center;" onclick="closeApply()">Cancel</button>
+  `;
+  document.getElementById('applyOverlay').classList.add('open');
+}
+function closeApply(){ document.getElementById('applyOverlay').classList.remove('open'); }
+function confirmApply(company){
+  closeApply();
+  closeDetail();
+  showToast(`Pinned! Your application to ${company} was sent.`);
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 3200);
+}
+
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='Escape'){ closeDetail(); closeApply(); }
+});
+
+// init
+buildFilterGroup('catFilters', CATS);
+buildFilterGroup('locFilters', LOCS);
+buildFilterGroup('expFilters', EXPS);
+buildFilterGroup('typeFilters', TYPES);
+document.getElementById('statTotal').textContent = JOBS.length;
+document.getElementById('statNew').textContent = JOBS.filter(j=>j.posted<=7).length;
+document.getElementById('statUrgent').textContent = JOBS.filter(j=>j.urgent).length;
+render();
+</script>
+</body>
 </html>
